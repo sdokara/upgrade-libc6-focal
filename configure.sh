@@ -70,7 +70,7 @@ deb http://ba.archive.ubuntu.com/ubuntu/ ${codename}-updates main restricted
 EOF1
 sudo apt-get update
 sudo apt-get install -y libc6
-sudo sed -i '/^deb.*${codename}.*$/d' /etc/apt/sources.list
+sudo sed -i "/^deb.*${codename}.*$/d" /etc/apt/sources.list
 sudo apt-get update
 EOF
 chmod +x scripts/upgrade.sh
@@ -79,5 +79,5 @@ echo "Done"
 
 
 echo "Reverting repositories..."
-sudo sed -i '/^deb.*${codename}.*$/d' /etc/apt/sources.list
+sudo sed -i "/^deb.*${codename}.*$/d" /etc/apt/sources.list
 sudo apt-get update
