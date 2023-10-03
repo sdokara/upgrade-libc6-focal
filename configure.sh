@@ -1,9 +1,17 @@
 #!/bin/bash
 set -e
 
+supported_codenames=("hirsute" "impish" "jammy" "kinetic" "lunar" "mantic")
 codename="$1"
-if [[ "${codename}" != "hirsute" ]] && [[ "${codename}" != "impish" ]]; then
-  echo "Usage: $0 <hirsute|impish>"
+for supported_codename in "${supported_codenames[@]}"; do
+  if [[ "${codename}" == "${supported_codename}" ]]; then
+    supported=1
+    break
+  fi
+done
+
+if [[ -z ${supported} ]]; then
+  echo "Usage: $0 <hirsute|impish|jammmy|kinetic|lunar|mantic>"
   exit 1
 fi
 
@@ -20,17 +28,17 @@ echo "Evaluating dependencies to upgrade... "
 install="sudo apt-get install -y --allow-downgrades"
 remove="sudo apt-get remove -y"
 
-mapfile -t lines <<< "$(sudo apt-get install --dry-run libc6 | grep '^Inst')"
+mapfile -t lines <<< "$(sudo apt-get install --dry-run libc6 | grep '^\(Inst\|Remv\)' | sort)"
 
+printf "%-30s %-30s %-30s\n" "Package" "Before" "After"
 for line in "${lines[@]}"; do
-  echo "${line}"
   parts=(${line})
 
   index=1
   package="${parts[${index}]}"
   index=$(expr ${index} + 1)
   existing=none
-  new=
+  new=none
   if [[ "${parts[${index}]}" =~ "[" ]]; then
     existing="$(sed 's/\[\(.*\)\]/\1/' <<< "${parts[${index}]}")"
     index=$(expr ${index} + 1)
@@ -45,7 +53,19 @@ for line in "${lines[@]}"; do
   else
     remove="${remove} ${package}"
   fi
+
+  if [[ "${existing}" != "none" ]]; then
+    if [[ "${new}" != "none" ]]; then
+      printf "\033[93m"
+    else
+      printf "\033[91m"
+    fi
+  else
+    printf "\033[92m"
+  fi
+  printf "%-30s %-30s %-30s\n" "${package}" "${existing}" "${new}"
 done
+printf "\033[39m"
 
 echo "Done"
 
@@ -70,7 +90,7 @@ deb http://ba.archive.ubuntu.com/ubuntu/ ${codename}-updates main restricted
 EOF1
 sudo apt-get update
 sudo apt-get install -y libc6
-sudo sed -i "/^deb.*${codename}.*$/d" /etc/apt/sources.list
+sudo sed -i "/^deb http:\/\/ba.archive.ubuntu.com\/ubuntu\/ ${codename}\(-updates\)\? main restricted$/d" /etc/apt/sources.list
 sudo apt-get update
 EOF
 chmod +x scripts/upgrade.sh
@@ -79,5 +99,5 @@ echo "Done"
 
 
 echo "Reverting repositories..."
-sudo sed -i "/^deb.*${codename}.*$/d" /etc/apt/sources.list
+sudo sed -i "/^deb http:\/\/ba.archive.ubuntu.com\/ubuntu\/ ${codename}\(-updates\)\? main restricted$/d" /etc/apt/sources.list
 sudo apt-get update
